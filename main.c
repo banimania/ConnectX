@@ -43,15 +43,18 @@ void print_board(int* b) {
   printf("\n");
 }
 
-void move(int* b, int x, int p) {
+int move(int* b, int x, int p) {
+  if (x < 0 || x >= n) return 0;
   int c = n - 1;
 
-  for (int i = c; i > 0; i--) {
+  for (int i = c; i >= -1; i--) {
+    if (i == -1) return 0;
     if (*(b + i * n + x) != 0) c--;
     else break;
   }
 
   *(b + c * n + x) = p;
+  return 1;
 }
 
 int check_winner(int* b, int p) {
@@ -76,6 +79,7 @@ int check_winner(int* b, int p) {
           if (c == m) return 1;
         } while (c);
 
+        //TODO: FIX xd
         //Diagonal ascending
         do {
           if (*(b + n * (i + c) + (j + c)) == p) c++;
@@ -86,7 +90,7 @@ int check_winner(int* b, int p) {
 
         //Diagonal descending
         do {
-          if (*(b + n * (i - c) + (j + c)) == p) c++;
+          if (*(b + n * i + j + n * (c + 1)) == p) c++;
           else c = 0;
 
           if (c == m) return 1;
@@ -97,17 +101,34 @@ int check_winner(int* b, int p) {
   return 0;
 }
 
+int check_draw(int* b) {
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (*(b + n * i + j) == 0) return 0;
+    }
+  }
+  return 1;
+}
+
 int check_state(int* b) {
   if (check_winner(b, 1)) return 1;
   else if (check_winner(b, 2)) return 2;
+  else if (check_draw(b)) return 3;
   else return 0;
 }
 
 int main(int argc, char* argv[]) {
-  printf("Enter the size of the board (3 - 30): ");
+  input_game:
+  printf("Enter the size of the board: ");
   scanf("%i", &n);
   printf("Enter the number of connections in order to win (1 - %i): ", n);
   scanf("%i", &m);
+
+  if (m > n) {
+    printf("\nThe required number of connections must be less than the board size!\n");
+    goto input_game;
+  }
+
   printf("Size of the board: %ix%i\n", n, n);
   printf("Connections needed to win: %i\n", m);
 
@@ -121,12 +142,17 @@ int main(int argc, char* argv[]) {
     int x;
     int p = t % 2 + 1;
     printf("Player %i must move\n", p);
+    
+    input_player:
     printf("Column (1 - %i): ", n);
     scanf("%i", &x);
 
     x--;
 
-    move(b, x, p);
+    if(!move(b, x, p)) {
+      printf("Illegal move!\n");
+      goto input_player;
+    }
 
     print_board(b);
 
@@ -134,7 +160,8 @@ int main(int argc, char* argv[]) {
     s = check_state(b);
   }
 
-  printf("The game has ended. Winner is player %i.", s);
+  if (s == 3) printf("Game ended in a draw!\n");
+  else printf("The game has ended. Winner is player %i (%c).\n", s, s == 2 ? 'X' : 'O');
   print_board(b);
 
   return 0;
