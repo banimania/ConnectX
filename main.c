@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
 * Board state
@@ -10,6 +11,13 @@
 
 int* b;
 int n, m, t, s;
+
+int ai_enabled;
+int ai_enabled_2;
+
+const int MAX = 1000;
+const int MIN = -1000;
+const int depth = 64;
 
 void setup_board(int* b) {
   for (int i = 0; i < n; i++) {
@@ -43,7 +51,7 @@ void print_board(int* b) {
   printf("\n");
 }
 
-int move(int* b, int x, int p) {
+int* move(int* b, int x, int p) {
   if (x < 0 || x >= n) return 0;
   int c = n - 1;
 
@@ -53,8 +61,10 @@ int move(int* b, int x, int p) {
     else break;
   }
 
-  *(b + c * n + x) = p;
-  return 1;
+  int* nb = (int*) malloc(n * n * sizeof(int));
+  memcpy(nb, b, n * n * sizeof(int));
+  *(nb + c * n + x) = p;
+  return nb;
 }
 
 int check_winner(int* b, int p) {
@@ -115,8 +125,76 @@ int check_state(int* b) {
   else return 0;
 }
 
+int eval_board(int* b, int p) {
+  int s = check_state(b);
+  if (s != 0) {
+    if (s == p) return MAX;
+    else return MIN;
+  }
+
+  return 0;
+}
+
+int minimax(int* b, int depth, int currentPlayer, int aiPlayer) {
+  int state = check_state(b);
+  if (depth == 0 || state != 0) {
+    return eval_board(b, aiPlayer);
+  }
+
+  int bestScore = (currentPlayer == aiPlayer) ? MIN : MAX;
+
+  for (int i = 0; i < n; i++) {
+    if (*(b + (n - 1) * n + i) == 0) {
+      int* nb = move(b, i, currentPlayer);
+      if (nb) {
+        int nextPlayer = (currentPlayer == 1) ? 2 : 1;
+        int score = minimax(nb, depth - 1, nextPlayer, aiPlayer);
+        if ((currentPlayer == aiPlayer && score > bestScore) ||
+          (currentPlayer != aiPlayer && score < bestScore)) {
+          bestScore = score;
+        }
+        free(nb);
+      }
+    }
+  }
+
+  return bestScore;
+}
+
+int ai_move(int* b, int p) {
+  int bestMove = 0;
+  int bestScore = MIN;
+
+  for (int i = 0; i < n; i++) {
+    if (*(b + (n - 1) * n + i) == 0) {
+      int* nb = move(b, i, p);
+      if (nb) {
+        int score = minimax(nb, depth, p, p);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = i;
+        }
+        free(nb);
+      }
+    }
+  }
+
+  return bestMove;
+}
+
+
 int main(int argc, char* argv[]) {
-  input_game:
+  char c;
+
+input_ai:
+  printf("Do you want to enable AI for the first player? [Y/N]: ");
+  scanf(" %c", &c);
+  ai_enabled = (c == 'Y' ? 1 : 0);
+  printf("Do you want to enable AI for the second player? [Y/N]: ");
+  scanf(" %c", &c);
+  ai_enabled_2 = (c == 'Y' ? 1 : 0);
+
+input_game:
   printf("Enter the size of the board: ");
   scanf("%i", &n);
   printf("Enter the number of connections in order to win (1 - %i): ", n);
@@ -127,8 +205,10 @@ int main(int argc, char* argv[]) {
     goto input_game;
   }
 
-  printf("Size of the board: %ix%i\n", n, n);
+  printf("\nSize of the board: %ix%i\n", n, n);
   printf("Connections needed to win: %i\n", m);
+  printf("AI for first player: %i\n", ai_enabled);
+  printf("AI for second player: %i\n", ai_enabled_2);
 
   b = (int*) malloc(n * n * sizeof(int));
 
@@ -140,18 +220,24 @@ int main(int argc, char* argv[]) {
     int x;
     int p = t % 2 + 1;
     printf("Player %i must move\n", p);
-    
+
+    if ((p == 1 && ai_enabled) || (p == 2 && ai_enabled_2)) {
+      int ai_m = ai_move(b, p);
+      b = move(b, ai_m, p);
+      printf("AI %i moved %i\n", p, ai_m);
+    } else {
     input_player:
-    printf("Column (1 - %i): ", n);
-    scanf("%i", &x);
+      printf("Column (1 - %i): ", n);
+      scanf("%i", &x);
 
-    x--;
+      x--;
 
-    if(!move(b, x, p)) {
-      printf("Illegal move!\n");
-      goto input_player;
+      int* nb = move(b, x, p);
+      if(!nb) {
+        printf("Illegal move!\n");
+        goto input_player;
+      } else b = nb;
     }
-
     print_board(b);
 
     t++;
