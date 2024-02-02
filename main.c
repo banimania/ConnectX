@@ -64,7 +64,8 @@ int check_winner(int* b, int p) {
         int c;
         //Horizontal
         do {
-          if (*(b + n * (c + i) + j) == p) c++;
+          if (n * (c + i) + j > n * n) c = 0; // definitely not 3 am bugfixing, i totally know why this is needed only in this check and not the other ones
+          else if (*(b + n * (c + i) + j) == p) c++;
           else c = 0;
 
           if (c == m) return 1;
@@ -72,15 +73,16 @@ int check_winner(int* b, int p) {
         
         //Vertical
         do {
-          if (*(b + n * i + j + c) == p) c++;
+          if (*(b + n * i + (c + j)) == p) c++;
           else c = 0;
           
           if (c == m) return 1;
         } while (c);
 
+        //TODO: FIX xd
         //Diagonal ascending
         do {
-          if (*(b + n * (i - c) + j + c) == p) c++;
+          if (*(b + n * (i + c) + (j + c)) == p) c++;
           else c = 0;
 
           if (c == m) return 1;
@@ -88,7 +90,7 @@ int check_winner(int* b, int p) {
 
         //Diagonal descending
         do {
-          if (*(b + n * (i + c) + j + c) == p) c++;
+          if (*(b + n * i + j + n * (c + 1)) == p) c++;
           else c = 0;
 
           if (c == m) return 1;
